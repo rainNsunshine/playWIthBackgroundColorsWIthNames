@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>random bg colour change</title>
+  <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
+  <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
+</head>
+<body>
+  <span></span>
+
+<button id="stop" type="button" style="background-color: lightcoral;">Stop</button>
+<button id="start" type="button" style="background-color: aquamarine;">Start</button>
+
+<h1>Background Colour</h1>
+
+<style>
+ #start {
+	font-size: 20px;
+	color: black;
+	font-weight: bold;
+	width: 200px;
+	margin: auto;
+	display: inline;
+	float: right;
+	border: 1px solid black;
+ }
+ #stop {
+	font-size: 20px;
+	color: black;
+	font-weight: bold;
+	width: 200px;
+	margin-left: 30px;
+	display: inline;
+	float: right;
+	border: 1px solid black;
+ }
+
+h1
+{
+	font-size: 60px;
+	color: black;
+	font-weight: bold;
+	position: absolute; /* taken out of the normal flow of the document */
+ 	top: 50%; /* moved down by 50% of the screen height */
+ 	transform: translateY(-50%); /* moved back up (Y axis) by half of its height to achieve the perfect center */
+ 	width: 100%; /* needs to be defined to keep the default block behavior */
+ 	text-align: center;
+ 	margin: 0; /* again, for perfect center */
+}
+</style>
+
+<py-env>
+    - webcolors
+    - scipy
+</py-env>
+
+  <script>
+
+  </script>
+
+  <py-script>
+from random import randint
+import webcolors
+from scipy.spatial import KDTree
+
+
+from js import alert, setInterval, setTimeout, clearInterval
+from pyodide import create_once_callable, create_proxy
+
+
+def convert_rgb_to_names(rgb_tuple):
+	
+    
+    names = []
+    rgb_values = []
+    for color_hex, color_name in webcolors.CSS3_HEX_TO_NAMES.items():
+        names.append(color_name)
+        rgb_values.append(webcolors.hex_to_rgb(color_hex))
+    
+    kdt_db = KDTree(rgb_values)
+    _, index = kdt_db.query(rgb_tuple)
+    
+    return f'{names[index]}'
+
+def callback():
+    
+    r, g, b = randint(0, 255), randint(0, 255), randint(0, 255) 
+
+    try:
+        newColour = webcolors.rgb_to_name((r,g,b))
+        document.title = newColour
+        
+    except ValueError:
+        newColour = convert_rgb_to_names((r,g,b))
+        document.title = f"closest colour: {newColour}"
+        
+    finally:
+        document.body.style.backgroundColor = f"rgb({r}, {g}, {b})"
+        document.querySelector("h1").innerHTML = newColour   
+
+
+<!-- 
+_ = setTimeout(
+    create_once_callable(
+        lambda: clearInterval(interval_id)
+    ),
+    10_000
+)
+-->
+
+def on_start_click(event):
+    document.querySelector("#start").disabled = True
+    document.querySelector("#stop").disabled = False
+    _ = setInterval(create_proxy(callback), 500)
+
+
+def on_stop_click(event):
+    document.querySelector("#start").disabled = False
+    document.querySelector("#stop").disabled = True    
+    for i in range(100000):
+        clearInterval(i)
+        
+
+_ = setInterval(create_proxy(callback), 500)
+document.querySelector("h1").innerHTML = "Started again"
+
+
+button1 = document.querySelector("#start")
+button1.addEventListener("click", create_proxy(on_start_click))
+
+button2 = document.querySelector("#stop")
+button2.addEventListener("click", create_proxy(on_stop_click))
+
+  </py-script>
+</body>
+</html>
